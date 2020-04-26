@@ -2,7 +2,7 @@
 
 Broadcast BTC Price using an ESP8266 board and wifi.
 
-![Android](https://raw.githubusercontent.com/valerio-vaccaro/BTC-PB/master/screenshots/1-android.jpg "Android")
+![Android](https://github.com/valerio-vaccaro/BTC-PB/blob/master/screenshots/1-android.jpeg "Android")
 
 Based on:
 
