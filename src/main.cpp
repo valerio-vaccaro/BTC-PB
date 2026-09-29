@@ -38,6 +38,9 @@ struct CurrencyPrice {
 CurrencyPrice currencyPrices[MAX_CURRENCIES];
 int numCurrencies = 0;
 int cur_counter = 9; // EUR
+float price = 1;
+unsigned int sat;
+static unsigned long ulTime = millis() - 1000000;
 
 #ifdef ESP32
 TM1638 module(25, 26, 27);
@@ -47,11 +50,8 @@ TM16xxDisplay display(&module, 8);
 u8_t status = 0;
 String ticker = "USD";
 String symbol = "USd";
-float price = 1;
-unsigned int sat;
 
 static unsigned long updateTime = millis();
-static unsigned long ulTime = millis() - 1000000;
 
 #define MAX_PAGES 2
 static bool page = 0;
@@ -217,6 +217,7 @@ void setup() {
 }
 
 void loop() {
+#ifdef ESP32
   uint32_t dwButtons = buttons.tick();
   if(millis() - updateTime > 1000) {
     updateTime = millis();
@@ -248,6 +249,7 @@ void loop() {
     }
     page = (page + 1) % MAX_PAGES;
   }
+#endif
 
   if(millis() - ulTime > 1000 * DELAY) {
     ulTime = millis();
