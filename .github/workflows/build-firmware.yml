@@ -1,0 +1,47 @@
+name: Build firmware
+
+on:
+  push:
+    branches: [main]
+    tags: ['*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and package firmware
+    runs-on: ubuntu-latest
+    env:
+      BUILD_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PlatformIO
+        run: python -m pip install --upgrade platformio
+
+      - name: Build every PlatformIO environment
+        run: pio run
+
+      - name: Package browser-flasher files
+        run: |
+          PACKAGE_VERSION="${BUILD_VERSION#v}"
+          python tools/package_firmware.py \
+            --version "$PACKAGE_VERSION" \
+            --output dist
+
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: btc-pb-firmware-${{ github.ref_name }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 90
