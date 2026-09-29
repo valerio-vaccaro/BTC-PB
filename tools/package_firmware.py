@@ -20,6 +20,9 @@ ESP32_FLASH_FILES = (
     (0xE000, "boot_app0.bin"),
     (0x10000, "firmware.bin"),
 )
+ESP32_REQUIRED_BUILD_FILES = tuple(
+    item for item in ESP32_FLASH_FILES if item[1] != "boot_app0.bin"
+)
 
 
 def sha256(path: Path) -> str:
@@ -30,16 +33,25 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def boot_app0_source() -> Path | None:
+    """Locate the Arduino-ESP32 boot app image installed by PlatformIO."""
+    candidates = [
+        Path.home()
+        / ".platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin",
+        Path.home()
+        / ".platformio/packages/framework-arduinoespressif32-libs/tools/partitions/boot_app0.bin",
+    ]
+    return next((candidate for candidate in candidates if candidate.exists()), None)
+
+
 def flash_files_for(environment: Path) -> tuple[tuple[int, str], ...]:
     """Return the flash layout based on the files produced by PlatformIO."""
-    if all((environment / name).exists() for _, name in ESP32_FLASH_FILES):
+    if all((environment / name).exists() for _, name in ESP32_REQUIRED_BUILD_FILES):
         return ESP32_FLASH_FILES
 
     firmware = environment / "firmware.bin"
     if firmware.exists():
-        companion_images = [
-            environment / name for _, name in ESP32_FLASH_FILES[:-1]
-        ]
+        companion_images = [environment / name for _, name in ESP32_REQUIRED_BUILD_FILES[:-1]]
         if any(image.exists() for image in companion_images):
             raise FileNotFoundError(
                 f"{environment} has an incomplete ESP32 flash layout"
@@ -81,6 +93,13 @@ def main() -> None:
 
         for address, source_name in flash_files_for(environment):
             source = environment / source_name
+            if source_name == "boot_app0.bin" and not source.exists():
+                source = boot_app0_source() or source
+            if not source.exists():
+                raise FileNotFoundError(
+                    f"{source_name} is required for {environment.name}; "
+                    "PlatformIO did not produce it and no framework fallback was found"
+                )
             target_name = f"0x{address:04X}_{source_name}"
             target = board_output / target_name
             shutil.copyfile(source, target)
